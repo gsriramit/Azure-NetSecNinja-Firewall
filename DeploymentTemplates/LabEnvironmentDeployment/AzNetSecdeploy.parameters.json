@@ -3,16 +3,16 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "DefaultUserName": {
-      "value": ""
+      "value": "svradmin"
     },
     "DefaultPassword": {
-      "value": ""
+      "value": "H@ppytimes123!"
     },
     "DiagnosticsWorkspaceName": {
       "value": "la-sentinel-workspace"
     },
     "DiagnosticsWorkspaceSubscription": {
-      "value": ""
+      "value": "695471ea-1fc3-42ee-a854-eab6c3009516"
     },
     "DiagnosticsWorkspaceResourceGroup": {
       "value": "rg-secops"
