@@ -50,6 +50,14 @@
     "DDOSProtectionEnabled": {
       "type": "bool",
       "defaultValue": false
+    },
+    "virtualMachineSize":{
+      "type": "string",
+      "defaultValue":"Standard_D4s_v3"
+    },
+    "osDiskType": {
+      "type": "string",
+      "defaultValue": "StandardSSD_LRS"
     }
   },  
   "variables": {
@@ -116,7 +124,9 @@
     "VM-Name1": "VM-Win10",
     "VM-Name2": "VM-Kali",
     "VM-Name3": "VM-Win2019",
-    "workspaceid": "[concat('/subscriptions/',parameters('DiagnosticsWorkspaceSubscription'),'/resourcegroups/', parameters('DiagnosticsWorkspaceResourceGroup'), '/providers/Microsoft.OperationalInsights/workspaces/',parameters('DiagnosticsWorkspaceName'))]"
+    "VM2-ImageName":"vm-vas-dev01-image-20220827_1",
+    "workspaceid": "[concat('/subscriptions/',parameters('DiagnosticsWorkspaceSubscription'),'/resourcegroups/', parameters('DiagnosticsWorkspaceResourceGroup'), '/providers/Microsoft.OperationalInsights/workspaces/',parameters('DiagnosticsWorkspaceName'))]",
+    "vasMachineBaseImageId":"[concat('/subscriptions/',parameters('DiagnosticsWorkspaceSubscription'),'/resourceGroups/',parameters('DiagnosticsWorkspaceResourceGroup'),'/providers/Microsoft.Compute/images/',variables('VM2-ImageName'))]"                  
   },
   "resources": [
     {
@@ -1159,219 +1169,7 @@
           ]
         }
       }
-    },
-    {
-      "type": "Microsoft.Network/frontdoors",
-      "apiVersion": "2019-04-01",
-      "dependsOn": [ "[concat(resourceGroup().id, '/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/',variables('FrontDoorPolicyName'))]" ],
-      "name": "[variables('FrontDoorName')]",
-      "location": "global",
-      "tags": {},
-      "properties": {
-        "friendlyName": "[variables('FrontDoorName')]",
-        "enabledState": "Enabled",
-        "healthProbeSettings": [
-          {
-            "name": "healthProbeSettings1",
-            "properties": {
-              "path": "/",
-              "protocol": "Http",
-              "intervalInSeconds": 30
-            }
-          }
-        ],
-        "loadBalancingSettings": [
-          {
-            "name": "loadBalancingSettings1",
-            "properties": {
-              "sampleSize": 4,
-              "successfulSamplesRequired": 2
-            }
-          }
-        ],
-        "frontendEndpoints": [
-          {
-            "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('FrontDoorName')), concat('/FrontendEndpoints/', variables('FrontDoorName'), '-azurefd-net'))]",
-            "name": "[concat(variables('FrontDoorName'), '-azurefd-net')]",
-            "properties": {
-              "hostName": "[concat(variables('FrontDoorName'), '.azurefd.net')]",
-              "sessionAffinityEnabledState": "Disabled",
-              "sessionAffinityTtlSeconds": 0,
-              "webApplicationFirewallPolicyLink": {
-                "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/FrontDoorWebApplicationFirewallPolicies/',variables('FrontDoorPolicyName'))]"
-              },
-              "resourceState": "Enabled"
-            }
-          }
-        ],
-        "backendPools": [
-          {
-            "name": "OWASP",
-            "properties": {
-              "backends": [
-                {
-                  "address": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('publicIpAddressName2'))).IpAddress]",
-                  "enabledState": "Enabled",
-                  "httpPort": 80,
-                  "httpsPort": 443,
-                  "priority": 1,
-                  "weight": 50,
-                  "backendHostHeader": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('publicIpAddressName2'))).IpAddress]"
-                }
-              ],
-              "loadBalancingSettings": {
-                "id": "[resourceId('Microsoft.Network/frontDoors/loadBalancingSettings', variables('FrontDoorName'), 'loadBalancingSettings1')]"
-              },
-              "healthProbeSettings": {
-                "id": "[resourceId('Microsoft.Network/frontDoors/healthProbeSettings', variables('FrontDoorName'), 'healthProbeSettings1')]"
-              }
-            }
-          }
-        ],
-        "routingRules": [
-          {
-            "name": "AppGW",
-            "properties": {
-              "frontendEndpoints": [
-                {
-                  "id": "[concat(resourceId('Microsoft.Network/frontdoors', variables('frontdoorname')), concat('/frontendEndpoints/', variables('frontdoorname'), '-azurefd-net'))]"
-                }
-              ],
-              "acceptedProtocols": [
-                "Http",
-                "Https"
-              ],
-              "patternsToMatch": [
-                "/*"
-              ],
-              "enabledState": "Enabled",
-              "routeConfiguration": {
-                "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
-                "forwardingProtocol": "HttpOnly",
-                "backendPool": {
-                  "id": "[resourceId('Microsoft.Network/frontDoors/backendPools', variables('FrontDoorName'), 'OWASP')]"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "type": "Microsoft.Network/frontdoorwebapplicationfirewallpolicies",
-      "apiVersion": "2019-10-01",
-      "name": "[variables('FrontdoorPolicyName')]",
-      "location": "Global",
-      "properties": {
-        "policySettings": {
-                    "enabledState": "Enabled",
-                    "mode": "Prevention",
-                    "redirectUrl": "https://www.microsoft.com/en-us/edge",
-                    "customBlockResponseStatusCode": 403,
-                    "customBlockResponseBody": "QmxvY2tlZCBieSBmcm9udCBkb29yIFdBRg=="
-        },
-        "customRules": {
-          "rules": [
-            {
-              "name": "BlockGeoLocationChina",
-              "enabledState": "Enabled",
-              "priority": 10,
-              "ruleType": "MatchRule",
-              "rateLimitDurationInMinutes": 1,
-              "rateLimitThreshold": 100,
-              "matchConditions": [
-                {
-                  "matchVariable": "RemoteAddr",
-                  "operator": "GeoMatch",
-                  "negateCondition": false,
-                  "matchValue": [
-                    "CN"
-                  ],
-                  "transforms": []
-                }
-              ],
-              "action": "Block"
-            },
-            {
-              "name": "RedirectInternetExplorerUserAgent",
-              "enabledState": "Enabled",
-              "priority": 20,
-              "ruleType": "MatchRule",
-              "rateLimitDurationInMinutes": 1,
-              "rateLimitThreshold": 100,
-              "matchConditions": [
-                {
-                  "matchVariable": "RequestHeader",
-                  "selector": "User-Agent",
-                  "operator": "Contains",
-                  "negateCondition": false,
-                  "matchValue": [
-                    "rv:11.0"
-                  ],
-                  "transforms": []
-                }
-              ],
-              "action": "Redirect"
-            },
-            {
-              "name": "RateLimitRequest",
-              "enabledState": "Enabled",
-              "priority": 30,
-              "ruleType": "RateLimitRule",
-              "rateLimitDurationInMinutes": 1,
-              "rateLimitThreshold": 1,
-              "matchConditions": [
-                {
-                  "matchVariable": "RequestUri",
-                  "operator": "Contains",
-                  "negateCondition": false,
-                  "matchValue": [
-                    "search"
-                  ],
-                  "transforms": []
-                }
-              ],
-              "action": "Block"
-            }
-          ]
-        },
-        "managedRules": {
-          "managedRuleSets": [
-            {
-              "ruleSetType": "DefaultRuleSet",
-              "ruleSetVersion": "1.0"
-
-            },
-            {
-              "ruleSetType": "BotProtection",
-              "ruleSetVersion": "preview-0.1"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Network/frontdoors/providers/diagnosticSettings",
-      "name": "[concat(variables('FrontDoorName'),'/microsoft.insights/', 'FrontDoorDiagnostics')]",
-      "apiVersion": "2017-05-01-preview",
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/frontdoors', variables('FrontDoorName'))]"
-      ],
-      "properties": {
-        "name": "DiagService",
-        "workspaceId": "[variables('workspaceId')]",
-        "logs": [
-          {
-            "category": "FrontdoorAccessLog",
-            "enabled": true
-          },
-          {
-            "category": "FrontdoorWebApplicationFirewallLog",
-            "enabled": true
-          }
-        ]
-      }
-    },
+    },    
     {
       "type": "Microsoft.Network/routeTables",
       "apiVersion": "2019-02-01",
@@ -1601,7 +1399,28 @@
           }
         ]
       }
-    },    
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2019-07-01",
+      "dependsOn": [ "[resourceId('Microsoft.Network/virtualNetworks', variables('VN-Name2'))]" ],
+      "name": "[variables('NIC-Name2')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAddress": "[variables('NIC-Name2Ipaddress')]",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('VN-Name2')), '/subnets/',variables('VN-Name2Subnet2Name'))]"
+              },
+              "privateIPAllocationMethod": "Static"
+            }
+          }
+        ]
+      }
+    },  
     {
       "type": "Microsoft.Network/networkInterfaces",
       "apiVersion": "2019-07-01",
@@ -1668,7 +1487,45 @@
           }
         }
       }
-    },    
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[variables('VM-Name2')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('NIC-Name2'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('virtualMachineSize')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "name": "[concat(variables('VM-Name2'),'-datadisk1')]",
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "[parameters('osDiskType')]"
+            }
+          },
+          "imageReference": {
+            "id":"[variables('vasMachineBaseImageId')]"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('NIC-Name2'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('VM-Name2')]",
+          "adminUsername": "[parameters('DefaultUserName')]",
+          "adminPassword": "[parameters('DefaultPassword')]"
+        }
+      }
+    },   
     {
       "type": "Microsoft.Compute/virtualMachines",
       "apiVersion": "2019-07-01",
