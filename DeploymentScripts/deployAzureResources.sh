@@ -7,8 +7,8 @@
 RG_LOCATION='eastus2'
 RG_NETWORK_NAME='rg-netsecninja'
 RG_SECOPS_NAME='rg-secops'
-SUBSCRIPTION_ID="695471ea-1fc3-42ee-a854-eab6c3009516"
-TENANT_ID="d787514b-d3f2-45ff-9bf1-971fb473fc85"
+SUBSCRIPTION_ID=""
+TENANT_ID=""
 DEPLOYMENT_NAME="NetSecNinja-FirewallTesting"
 DIAGNOSTICS_WORKSPACE_NAME="la-sentinel-workspace"
 
